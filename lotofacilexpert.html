@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LotofácilExpert - Sorteador e Análise</title>
+    <!-- Inclui o Tailwind CSS para fácil estilização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a altura do HTML e BODY para preencher a tela inteira */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow-x: hidden; /* Evita rolagem horizontal */
+            overflow-y: auto; /* Permite rolagem vertical se o conteúdo for grande */
+            font-family: "Inter", sans-serif; /* Define a fonte Inter */
+        }
+        /* Estilos para a seção do gerador de senha do criador quando oculta */
+        .creator-section-hidden {
+            display: none;
+        }
+        /* Nova classe para ocultar elementos */
+        .hidden-until-unlocked {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-purple-700 flex flex-col items-center justify-start p-2 min-h-screen relative">
+    <!-- 
+        O corpo da página é configurado com:
+        - bg-purple-700: Define o fundo como um tom de roxo do Tailwind CSS.
+        - flex flex-col: Habilita o Flexbox e organiza os itens em uma coluna.
+        - items-center: Centraliza os itens horizontalmente na coluna.
+        - justify-start: Alinha os itens ao topo na coluna (alterado de justify-center para evitar que o conteúdo empurre elementos para fora da tela).
+        - p-2: Adiciona um padding menor para espaçamento nas bordas.
+        - min-h-screen: Garante que o body ocupe no mínimo 100% da altura da tela.
+        - relative: Necessário para que os elementos com 'fixed' se posicionem em relação ao body.
+    -->
+
+    <!-- Contêiner para os elementos fixos no topo -->
+    <!-- Definimos a altura (h-64 - 256px) e o z-index para garantir que fiquem no topo -->
+    <div class="fixed top-0 left-0 w-full h-64 bg-purple-700 z-50 flex justify-around items-start p-4">
+        <!-- Controles de Acesso Mestre Principal -->
+        <div id="main-master-access-controls" class="fixed top-4 left-4 p-4 bg-purple-800 rounded-lg shadow-xl text-white text-sm w-48">
+            <label for="main-access-master-password-input" class="block font-bold mb-2">Senha Mestra Principal:</label>
+            <input type="password" id="main-access-master-password-input" placeholder="******" class="w-full p-2 rounded-md bg-purple-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2">
+            <button id="unlock-main-access-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded-full text-xs w-full">
+                Desbloquear Acesso Principal
+            </button>
+            <p id="main-access-message" class="text-xs italic text-gray-300 mt-1">Insira a senha mestra para acessar.</p>
+        </div>
+
+        <!-- Botão para abrir/fechar o gerador de senha do criador (inicialmente oculto) -->
+        <div class="fixed top-4 left-4 hidden-until-unlocked" id="toggle-creator-section-container">
+            <button id="toggle-creator-section-button" class="bg-purple-900 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded-full shadow-lg text-sm transform transition duration-300 hover:scale-105">
+                Acessar Gerador de Senha
+            </button>
+        </div>
+
+        <!-- Seção para Gerar Senha do Criador (inicialmente oculta) -->
+        <div id="creator-password-section" class="p-4 bg-purple-800 rounded-lg shadow-xl text-white text-sm w-48 relative creator-section-hidden">
+            <h3 class="font-bold mb-2">Gerar Senha do Criador</h3>
+            
+            <!-- Container para o botão de gerar nova senha e o campo da senha gerada -->
+            <!-- Estes controles agora estão sempre visíveis uma vez que a seção do criador é acessada -->
+            <div id="generated-password-controls">
+                <button id="generate-creator-password" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded-full text-xs w-full mb-2">
+                    Gerar Nova Senha
+                </button>
+                <p id="generated-creator-password" class="bg-purple-900 p-2 rounded-md text-center break-all mb-2">
+                    <!-- Senha gerada aqui -->
+                </p>
+                <button id="copy-creator-password" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-2 rounded-full text-xs w-full mb-1">
+                    Copiar Senha
+                </button>
+            </div>
+            
+            <p id="creator-password-message" class="text-xs italic text-gray-300 mt-1">
+                Gere e copie suas senhas.
+            </p>
+            <!-- Botão para fechar a seção -->
+            <button id="close-creator-section-button" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded-full text-xs">
+                X
+            </button>
+        </div>
+
+        <!-- Campo para inserir Senha para Desbloquear (para gerar jogos) -->
+        <div class="p-4 bg-purple-800 rounded-lg shadow-xl text-white text-sm w-48">
+            <label for="password-input" class="block font-bold mb-2">Senha para Desbloquear:</label>
+            <input type="password" id="password-input" placeholder="******" class="w-full p-2 rounded-md bg-purple-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2">
+            <button id="unlock-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded-full text-xs w-full">
+                Desbloquear
+            </button>
+            <p id="unlock-message" class="text-xs italic text-gray-300 mt-1">Insira a senha para gerar jogos.</p>
+        </div>
+
+        <!-- Seção para Fixar Números (topo direito) -->
+        <div class="p-4 bg-purple-800 rounded-lg shadow-xl text-white text-sm w-48">
+            <h3 class="font-bold mb-2">Fixar Números (Máx 5)</h3>
+            <div id="fixed-numbers-selection-grid" class="grid grid-cols-5 gap-1 mb-3">
+                <!-- Números de 1 a 25 serão renderizados aqui pelo JS para seleção -->
+            </div>
+            <button id="confirm-fixed-numbers" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded-full text-xs w-full mb-2">
+                Confirmar Fixos
+            </button>
+            <button id="clear-fixed-numbers" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded-full text-xs w-full">
+                Limpar Fixos
+            </button>
+            <div class="mt-3">
+                <p>Números Fixados:</p>
+                <div id="current-fixed-numbers" class="flex flex-wrap gap-1 mt-1">
+                    <span class="text-xs italic text-gray-300">Nenhum</span>
+                </div>
+                <div id="fixed-numbers-message" class="text-red-300 text-xs mt-2 hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wrapper para o conteúdo principal, com margin-top para evitar sobreposição do header fixo -->
+    <!-- O valor de mt-[280px] é a altura do header (h-64 = 256px) + um pouco de margem extra -->
+    <div class="mt-[280px] w-full flex flex-col items-center">
+        <!-- Título principal do aplicativo -->
+        <h1 class="text-3xl font-extrabold text-white mb-6 text-center">LotofácilExpert</h1>
+
+        <!-- Título para a seção do gerador de jogos -->
+        <h2 class="text-2xl font-bold text-white mb-4 text-center">Gerador de Jogos Personalizados</h2>
+
+        <!-- Botão para gerar os números (agora controlado pelo dropdown) -->
+        <div class="flex items-center space-x-3 mb-6">
+            <button id="generate-button" class="bg-purple-900 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded-full shadow-lg text-base transform transition duration-300 hover:scale-105" disabled>
+                Gerar Jogo <span id="generate-button-clicks-remaining" class="ml-2">(0)</span>
+            </button>
+            <select id="num-games-select" class="bg-purple-800 text-white rounded-full py-2 px-3 shadow-lg text-base">
+                <option value="1">1 Jogo</option>
+                <option value="2">2 Jogos</option>
+                <option value="3">3 Jogos</option>
+                <option value="4">4 Jogos</option>
+                <option value="5">5 Jogos</option>
+                <option value="6">6 Jogos</option>
+                <option value="7">7 Jogos</option>
+                <option value="8">8 Jogos</option>
+                <option value="9">9 Jogos</option>
+                <option value="10" selected>10 Jogos</option>
+            </select>
+        </div>
+
+        <!-- Seção para os 10 jogos gerados pelo usuário -->
+        <h3 class="text-xl font-bold text-white mb-3 text-center">Sugestões de Jogos</h3>
+        <div id="user-generated-games-list" class="bg-purple-800 p-4 rounded-lg shadow-xl max-w-4xl w-full text-white text-sm mb-6">
+            <p class="text-center mb-3">Clique em "Gerar Jogo" para ver suas sugestões!</p>
+            <!-- Os jogos gerados serão inseridos aqui pelo JavaScript -->
+        </div>
+
+        <!-- Botão para buscar o último sorteio da Lotofácil -->
+        <button id="fetch-latest-lotofacil" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-full shadow-lg text-base transform transition duration-300 hover:scale-105 mb-6">
+            Buscar Último Sorteio
+        </button>
+
+        <!-- Seção para o último sorteio da Lotofácil -->
+        <h2 class="text-xl font-bold text-white mb-3 text-center">Último Sorteio da Lotofácil</h2>
+        <div class="flex flex-wrap justify-center gap-1 max-w-4xl mb-6" id="lotofacil-display-container">
+            <p class="text-center w-full">Carregando último sorteio...</p>
+        </div>
+
+        <!-- Seção para Análise dos Últimos 10 Sorteios (Compilado) -->
+        <h2 class="text-xl font-bold text-white mb-3 text-center">Análise dos Últimos 10 Sorteios</h2>
+        <div id="analysis-results" class="bg-purple-800 p-4 rounded-lg shadow-xl max-w-2xl w-full text-white text-base mb-6">
+            <p class="text-center mb-3">Carregando análise compilada...</p>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <p><strong>Ímpares:</strong></p>
+                    <p>Mín: <span id="min-odd" class="font-bold">--</span></p>
+                    <p>Máx: <span id="max-odd" class="font-bold">--</span></p>
+                    <p>Média: <span id="avg-odd" class="font-bold">--</span></p>
+                </div>
+                <div>
+                    <p><strong>Pares:</strong></p>
+                    <p>Mín: <span id="min-even" class="font-bold">--</span></p>
+                    <p>Máx: <span id="max-even" class="font-bold">--</span></p>
+                    <p>Média: <span id="avg-even" class="font-bold">--</span></p>
+                </div>
+                <div>
+                    <p><strong>Fibonacci:</strong></p>
+                    <p>Mín: <span id="min-fib" class="font-bold">--</span></p>
+                    <p>Máx: <span id="max-fib" class="font-bold">--</span></p>
+                    <p>Média: <span id="avg-fib" class="font-bold">--</span></p>
+                </div>
+                <div>
+                    <p><strong>Soma Total:</strong></p>
+                    <p>Mín: <span id="min-sum" class="font-bold">--</span></p>
+                    <p>Máx: <span id="max-sum" class="font-bold">--</span></p>
+                    <p>Média: <span id="avg-sum" class="font-bold">--</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção para Análise de Jogo com IA -->
+        <h2 class="text-xl font-bold text-white mb-3 text-center">Análise de Jogo com IA ✨</h2>
+        <div id="ai-analysis-result" class="bg-purple-800 p-4 rounded-lg shadow-xl max-w-2xl w-full text-white text-base">
+            <p class="text-center">A análise da IA será exibida aqui.</p>
+        </div>
+    </div> <!-- Fim do wrapper do conteúdo principal -->
+
+    <script>
+        /**
+         * Objeto `LotteryUtils` encapsula funções utilitárias para a lógica da loteria.
+         */
+        const LotteryUtils = {
+            /**
+             * Gera um array de números únicos e aleatórios dentro de um intervalo.
+             * @param {number} count - Quantidade de números a gerar.
+             * @param {number} min - Valor mínimo (inclusivo).
+             * @param {number} max - Valor máximo (inclusivo).
+             * @param {number[]} exclude - Array de números a serem excluídos da geração.
+             * @returns {number[]} Array de números únicos e ordenados.
+             */
+            generateUniqueRandomNumbers: function(count, min, max, exclude = []) {
+                const numbers = new Set();
+                const possibleNumbers = Array.from({ length: (max - min + 1) }, (_, i) => min + i)
+                                             .filter(num => !exclude.includes(num));
+
+                if (possibleNumbers.length < count) {
+                    return [];
+                }
+
+                while (numbers.size < count) {
+                    const randomIndex = Math.floor(Math.random() * possibleNumbers.length);
+                    const randomNumber = possibleNumbers[randomIndex];
+                    numbers.add(randomNumber);
+                }
+                return Array.from(numbers).sort((a, b) => a - b);
+            },
+
+            /**
+             * Verifica se um número é um quadrado perfeito.
+             * @param {number} n - O número a ser verificado.
+             * @returns {boolean} True se for um quadrado perfeito, false caso contrário.
+             */
+            isPerfectSquare: function(n) {
+                if (n < 0) return false;
+                const root = Math.round(Math.sqrt(n));
+                return root * root === n;
+            },
+
+            /**
+             * Verifica se um número é um número Fibonacci.
+             * Utiliza a propriedade: um número 'n' é Fibonacci se (5*n*n + 4) ou (5*n*n - 4) é um quadrado perfeito.
+             * @param {number} n - O número a ser verificado.
+             * @returns {boolean} True se for um número Fibonacci, false caso contrário.
+             */
+            isFibonacci: function(n) {
+                return this.isPerfectSquare(5 * n * n + 4) || this.isPerfectSquare(5 * n * n - 4);
+            },
+
+            /**
+             * Calcula estatísticas (ímpares, pares, soma total, Fibonacci) para um conjunto de números.
+             * @param {number[]} numbers - Array de números a serem analisados.
+             * @returns {{odd: number, even: number, sum: number, fibonacci: number}} Objeto com as estatísticas.
+             */
+            calculateStatistics: function(numbers) {
+                let oddCount = 0;
+                let evenCount = 0;
+                let totalSum = 0;
+                let fibonacciCount = 0;
+
+                numbers.forEach(number => {
+                    if (number % 2 === 0) {
+                        evenCount++;
+                    } else {
+                        oddCount++;
+                    }
+                    totalSum += number;
+                    if (this.isFibonacci(number)) {
+                        fibonacciCount++;
+                    }
+                });
+
+                return { odd: oddCount, even: evenCount, sum: totalSum, fibonacci: fibonacciCount };
+            },
+
+            /**
+             * Calcula o fatorial de um número.
+             * @param {number} n - O número.
+             * @returns {number} O fatorial de n.
+             */
+            factorial: function(n) {
+                if (n === 0 || n === 1) return 1;
+                let result = 1;
+                for (let i = 2; i <= n; i++) {
+                    result *= i;
+                }
+                return result;
+            },
+
+            /**
+             * Calcula as combinações (nCk).
+             * @param {number} n - Total de itens.
+             * @param {number} k - Itens a escolher.
+             * @returns {number} O número de combinações.
+             */
+            combinations: function(n, k) {
+                if (k < 0 || k > n) return 0;
+                if (k === 0 || k === n) return 1;
+                if (k > n / 2) k = n - k; // Otimização: C(n, k) = C(n, n-k)
+
+                let res = 1;
+                for (let i = 1; i <= k; i++) {
+                    res = res * (n - i + 1) / i;
+                }
+                return Math.round(res); // Arredonda para lidar com imprecisões de ponto flutuante
+            },
+
+            /**
+             * Calcula a probabilidade de acertar pelo menos 11 pontos na Lotofácil.
+             * Considerando 15 números jogados em um universo de 25, e 15 sorteados.
+             * @returns {string} A probabilidade formatada em porcentagem.
+             */
+            calculateProbabilityOfAtLeast11Hits: function() {
+                const N = 25; // Total de números disponíveis (1 a 25)
+                const K = 15; // Números sorteados na Lotofácil
+                const P = 15; // Números jogados pelo usuário (sempre 15 para um jogo completo)
+
+                const totalCombinations = this.combinations(N, K); // Total de combinações possíveis na Lotofácil
+
+                let favorableCombinations = 0;
+                // Soma as combinações para 11, 12, 13, 14 e 15 acertos
+                for (let h = 11; h <= 15; h++) {
+                    // C(P, h): Combinações de 'h' acertos entre os 'P' números jogados
+                    // C(N-P, K-h): Combinações de 'K-h' erros entre os 'N-P' números não jogados
+                    favorableCombinations += this.combinations(P, h) * this.combinations(N - P, K - h);
+                }
+
+                if (totalCombinations === 0) return "N/A"; 
+
+                const probability = (favorableCombinations / totalCombinations) * 100;
+                return probability.toFixed(2) + "%";
+            }
+        };
+
+        /**
+         * Objeto `FixedNumbersManager` gerencia a seleção e estado dos números fixos.
+         */
+        const FixedNumbersManager = {
+            selectionGrid: null,
+            confirmButton: null,
+            clearButton: null,
+            currentFixedNumbersDisplay: null,
+            fixedNumbersMessageDisplay: null, // Nova propriedade para a mensagem
+            selectedForFixing: new Set(), // Números temporariamente selecionados pelo usuário
+            fixedNumbers: [], // Números fixos confirmados
+
+            /**
+             * Inicializa os elementos da UI e listeners.
+             */
+            init: function() {
+                this.selectionGrid = document.getElementById('fixed-numbers-selection-grid');
+                this.confirmButton = document.getElementById('confirm-fixed-numbers');
+                this.clearButton = document.getElementById('clear-fixed-numbers');
+                this.currentFixedNumbersDisplay = document.getElementById('current-fixed-numbers');
+                this.fixedNumbersMessageDisplay = document.getElementById('fixed-numbers-message'); // Inicializa a nova propriedade
+
+                this.renderSelectionGrid();
+                this.confirmButton.addEventListener('click', () => this.confirmSelection());
+                this.clearButton.addEventListener('click', () => this.clearSelection());
+            },
+
+            /**
+             * Renderiza a grade de seleção de números de 1 a 25.
+             */
+            renderSelectionGrid: function() {
+                this.selectionGrid.innerHTML = '';
+                for (let i = 1; i <= 25; i++) {
+                    const numDiv = document.createElement('div');
+                    numDiv.textContent = i;
+                    numDiv.classList.add('w-6', 'h-6', 'bg-purple-900', 'text-white', 'font-bold', 'rounded-full', 'flex', 'items-center', 'justify-center', 'text-xs', 'cursor-pointer', 'select-none');
+                    numDiv.dataset.number = i; // Armazena o número no dataset
+                    numDiv.addEventListener('click', (event) => this.toggleSelection(event.target, i));
+                    this.selectionGrid.appendChild(numDiv);
+                }
+                this.updateSelectionGridUI(); // Atualiza o estado visual inicial
+            },
+
+            /**
+             * Adiciona ou remove um número da seleção temporária.
+             * @param {HTMLElement} element - O elemento HTML do número clicado.
+             * @param {number} number - O número clicado.
+             */
+            toggleSelection: function(element, number) {
+                if (this.selectedForFixing.has(number)) {
+                    this.selectedForFixing.delete(number);
+                    console.log('Número removido:', number, 'Tamanho atual:', this.selectedForFixing.size);
+                } else {
+                    // Permite adicionar até 5 números
+                    if (this.selectedForFixing.size < 5) { 
+                        this.selectedForFixing.add(number);
+                        console.log('Número adicionado:', number, 'Tamanho atual:', this.selectedForFixing.size);
+                    } else {
+                        console.log('Não é possível adicionar o número:', number, 'Máximo de 5 números já selecionados.');
+                    }
+                }
+                this.updateSelectionGridUI();
+            },
+
+            /**
+             * Atualiza o estado visual dos números na grade de seleção.
+             */
+            updateSelectionGridUI: function() {
+                this.selectionGrid.querySelectorAll('div').forEach(div => {
+                    const num = parseInt(div.dataset.number);
+                    if (this.selectedForFixing.has(num)) {
+                        div.classList.remove('bg-purple-900');
+                        div.classList.add('bg-blue-500'); // Cor para número selecionado
+                    } else {
+                        div.classList.remove('bg-blue-500');
+                        div.classList.add('bg-purple-900'); // Cor padrão
+                    }
+                });
+
+                // Adiciona esta lógica para habilitar/desabilitar o botão de confirmação dinamicamente
+                if (this.selectedForFixing.size >= 1 && this.selectedForFixing.size <= 5) {
+                    this.confirmButton.disabled = false;
+                    this.confirmButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    console.log('Botão Confirmar habilitado. Tamanho atual:', this.selectedForFixing.size);
+                } else {
+                    this.confirmButton.disabled = true;
+                    this.confirmButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    console.log('Botão Confirmar desabilitado. Tamanho atual:', this.selectedForFixing.size);
+                }
+            },
+
+            /**
+             * Confirma a seleção de números fixos.
+             */
+            confirmSelection: function() {
+                console.log("Botão Confirmar Fixos clicado. Contagem de selecionados:", this.selectedForFixing.size); // Log de depuração
+                this.fixedNumbersMessageDisplay.classList.add('hidden'); // Limpa mensagens anteriores
+                
+                // Permite de 1 a 5 números fixos
+                if (this.selectedForFixing.size >= 1 && this.selectedForFixing.size <= 5) {
+                    // Ordena os números fixos para manter consistência
+                    this.fixedNumbers = Array.from(this.selectedForFixing).sort((a,b) => a - b);
+                    console.log("Números fixos confirmados:", this.fixedNumbers); // Log de depuração
+                    this.updateFixedNumbersDisplay();
+                } else {
+                    this.fixedNumbersMessageDisplay.textContent = 'Por favor, selecione de 1 a 5 números para fixar.';
+                    this.fixedNumbersMessageDisplay.classList.remove('hidden');
+                }
+            },
+
+            /**
+             * Limpa os números fixos e redefine a UI.
+             */
+            clearSelection: function() {
+                this.selectedForFixing.clear();
+                this.fixedNumbers = []; // Limpa os números fixos
+                this.updateSelectionGridUI(); // Atualiza a grade para o estado padrão
+                this.updateFixedNumbersDisplay(); // Limpa a exibição dos fixos
+                this.fixedNumbersMessageDisplay.classList.add('hidden'); // Limpa mensagens
+                // Reabilita a grade de seleção (já tratado por updateSelectionGridUI ao limpar selectedForFixing)
+                this.selectionGrid.querySelectorAll('div').forEach(div => div.classList.remove('pointer-events-none', 'opacity-50'));
+            },
+
+            /**
+             * Atualiza a exibição dos números fixos atuais.
+             */
+            updateFixedNumbersDisplay: function() {
+                if (this.fixedNumbers.length > 0) {
+                    this.currentFixedNumbersDisplay.innerHTML = this.fixedNumbers.map(num => `
+                        <div class="w-6 h-6 bg-blue-600 text-white font-bold rounded-full flex items-center justify-center text-xs">
+                            ${num}
+                        </div>
+                    `).join('');
+                } else {
+                    this.currentFixedNumbersDisplay.innerHTML = '<span class="text-xs italic text-gray-300">Nenhum</span>';
+                }
+            },
+
+            /**
+             * Retorna os números fixos atualmente confirmados.
+             * @returns {number[]} Array de números fixos.
+             */
+            getFixedNumbers: function() {
+                return this.fixedNumbers;
+            }
+        };
+
+        /**
+         * Objeto `LotofacilDataFetcher` para buscar dados da Lotofácil.
+         */
+        const LotofacilDataFetcher = {
+            BASE_API_URL: 'https://loteriascaixa-api.herokuapp.com/api/lotofacil',
+
+            /**
+             * Busca o último resultado da Lotofácil.
+             * @returns {Promise<object|null>} Os dados do último resultado ou null em caso de erro.
+             */
+            fetchLatestResult: async function() {
+                const url = `${this.BASE_API_URL}/latest`;
+                try {
+                    console.log(`[LotofacilDataFetcher] Buscando último resultado da Lotofácil: ${url}`);
+                    const response = await fetch(url);
+                    console.log(`[LotofacilDataFetcher] Resposta do último resultado - Status: ${response.status}, OK: ${response.ok}`);
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP! Status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    console.log('[LotofacilDataFetcher] Dados do último resultado:', data);
+                    return data;
+                }
+                catch (error) {
+                    console.error('[LotofacilDataFetcher] Erro ao buscar o último resultado da Lotofácil:', error);
+                    return null;
+                }
+            },
+
+            /**
+             * Busca os últimos N resultados da Lotofácil.
+             * Este método assume que os números dos concursos são sequenciais e decrementa a partir do último.
+             * @param {number} n - O número de resultados históricos a buscar.
+             * @returns {Promise<Array<object>>} Um array de objetos de resultados históricos.
+             */
+            fetchLastNResults: async function(n) {
+                const results = [];
+                console.log(`[LotofacilDataFetcher] Tentando buscar os últimos ${n} resultados históricos.`);
+                const latestResult = await this.fetchLatestResult();
+
+                if (!latestResult || !latestResult.concurso) {
+                    console.warn('[LotofacilDataFetcher] Não foi possível obter o número do último concurso. Não é possível recuperar dados históricos.');
+                    return [];
+                }
+
+                let currentConcurso = latestResult.concurso;
+                console.log(`[LotofacilDataFetcher] Último concurso encontrado: ${currentConcurso}.`);
+
+                // Tenta buscar os últimos 'n' concursos
+                for (let i = 0; i < n; i++) {
+                    const url = `${this.BASE_API_URL}/${currentConcurso}`;
+                    console.log(`[LotofacilDataFetcher] Buscando concurso histórico ${currentConcurso}: ${url}`);
+                    try {
+                        const response = await fetch(url);
+                        console.log(`[LotofacilDataFetcher] Resposta do concurso ${currentConcurso} - Status: ${response.status}, OK: ${response.ok}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data && data.dezenas && Array.isArray(data.dezenas) && data.dezenas.length === 15) {
+                                results.push(data);
+                                console.log(`[LotofacilDataFetcher] Concurso ${currentConcurso} adicionado aos resultados. Dezenas:`, data.dezenas);
+                            } else {
+                                console.warn(`[LotofacilDataFetcher] Dados inválidos para o concurso ${currentConcurso}:`, data);
+                            }
+                        } else {
+                            console.warn(`[LotofacilDataFetcher] Falha ao buscar o concurso ${currentConcurso}. Status: ${response.status}`);
+                        }
+                    } catch (error) {
+                        console.error(`[LotofacilDataFetcher] Erro ao buscar o concurso ${currentConcurso}:`, error);
+                    }
+                    currentConcurso--; // Decrementa para o concurso anterior
+                    if (currentConcurso <= 0) {
+                        console.log('[LotofacilDataFetcher] Número do concurso atingiu ou passou de 0. Parando a busca histórica.');
+                        break; // Para se o número do concurso for muito baixo
+                    }
+                }
+                console.log(`[LotofacilDataFetcher] Busca histórica finalizada. Total de resultados obtidos: ${results.length}`);
+                return results;
+            }
+        };
+
+        /**
+         * Objeto `LotofacilUI` gerencia as atualizações da interface do usuário relacionadas à Lotofácil.
+         */
+        const LotofacilUI = {
+            displayContainer: null, // Referência ao contêiner dos números
+            fetchButton: null, // Novo: Referência ao botão de buscar último sorteio
+            latestLotofacilDezenas: [], // Armazena as dezenas do último sorteio
+
+            /**
+             * Inicializa os elementos de exibição dos números da Lotofácil.
+             */
+            init: function() {
+                this.displayContainer = document.getElementById('lotofacil-display-container');
+                this.fetchButton = document.getElementById('fetch-latest-lotofacil'); // Pega o novo botão
+                this.fetchButton.addEventListener('click', () => this.updateNumbers()); // Adiciona o listener
+                this.updateNumbers(); // Atualiza na carga inicial
+            },
+
+            /**
+             * Atualiza os números exibidos na seção "Último Sorteio da Lotofácil" usando dados reais da API.
+             */
+            updateNumbers: async function() {
+                this.displayContainer.innerHTML = '<p class="text-center w-full">Carregando último sorteio...</p>';
+
+                const data = await LotofacilDataFetcher.fetchLatestResult();
+
+                if (data && data.dezenas && Array.isArray(data.dezenas) && data.dezenas.length === 15) {
+                    const lotofacilNumbers = data.dezenas.map(Number).sort((a,b) => a - b); // Converte para número e ordena
+                    this.latestLotofacilDezenas = lotofacilNumbers; // Armazena as dezenas
+                    this.displayContainer.innerHTML = ''; // Limpa a mensagem de carregamento
+                    lotofacilNumbers.forEach(number => {
+                        const numDiv = document.createElement('div');
+                        numDiv.textContent = number;
+                        numDiv.classList.add('w-10', 'h-10', 'bg-indigo-800', 'text-white', 'font-bold', 'rounded-full', 'flex', 'items-center', 'justify-center', 'shadow-lg', 'text-lg', 'md:text-xl');
+                        this.displayContainer.appendChild(numDiv);
+                    });
+                } else {
+                    this.displayContainer.innerHTML = '<p class="text-center w-full text-red-300">Erro ao carregar sorteio. Verifique sua conexão ou tente novamente mais tarde.</p>';
+                    console.error('Dados do sorteio inválidos ou incompletos:', data);
+                }
+            }
+        };
+
+        /**
+         * Objeto `AnalysisUI` gerencia a exibição da análise compilada dos sorteios.
+         */
+        const AnalysisUI = {
+            container: null,
+            minOddDisplay: null, maxOddDisplay: null, avgOddDisplay: null,
+            minEvenDisplay: null, maxEvenDisplay: null, avgEvenDisplay: null,
+            minFibDisplay: null, maxFibDisplay: null, avgFibDisplay: null,
+            minSumDisplay: null, maxSumDisplay: null, avgSumDisplay: null,
+
+            /**
+             * Inicializa os elementos de exibição da análise.
+             */
+            init: function() {
+                this.container = document.getElementById('analysis-results');
+                this.minOddDisplay = document.getElementById('min-odd');
+                this.maxOddDisplay = document.getElementById('max-odd');
+                this.avgOddDisplay = document.getElementById('avg-odd');
+                this.minEvenDisplay = document.getElementById('min-even');
+                this.maxEvenDisplay = document.getElementById('max-even');
+                this.avgEvenDisplay = document.getElementById('avg-even');
+                this.minFibDisplay = document.getElementById('min-fib');
+                this.maxFibDisplay = document.getElementById('max-fib');
+                this.avgFibDisplay = document.getElementById('avg-fib');
+                this.minSumDisplay = document.getElementById('min-sum');
+                this.maxSumDisplay = document.getElementById('max-sum');
+                this.avgSumDisplay = document.getElementById('avg-sum');
+                this.performAnalysis(); // Realiza a análise na carga inicial
+            },
+
+            /**
+             * Realiza a análise de N sorteios simulados e exibe os resultados compilados.
+             * NOTA: Esta análise ainda usa números simulados, pois o endpoint fornecido
+             * não permite buscar facilmente um histórico de múltiplos sorteios de forma agregada.
+             */
+            performAnalysis: function() {
+                const numSimulations = 10;
+                let totalOdds = 0;
+                let totalEvens = 0;
+                let totalFibonacci = 0;
+                let totalSums = 0;
+
+                let minOdd = Infinity, maxOdd = -Infinity;
+                let minEven = Infinity, maxEven = -Infinity;
+                let minFib = Infinity, maxFib = -Infinity;
+                let minSum = Infinity, maxSum = -Infinity;
+
+                for (let i = 0; i < numSimulations; i++) {
+                    const numbers = LotteryUtils.generateUniqueRandomNumbers(15, 1, 25);
+                    const stats = LotteryUtils.calculateStatistics(numbers);
+
+                    totalOdds += stats.odd;
+                    totalEvens += stats.even;
+                    totalFibonacci += stats.fibonacci;
+                    totalSums += stats.sum;
+
+                    minOdd = Math.min(minOdd, stats.odd);
+                    maxOdd = Math.max(maxOdd, stats.odd);
+                    minEven = Math.min(minEven, stats.even);
+                    maxEven = Math.max(maxEven, stats.even);
+                    minFib = Math.min(minFib, stats.fibonacci);
+                    maxFib = Math.max(maxFib, stats.fibonacci);
+                    minSum = Math.min(minSum, stats.sum);
+                    maxSum = Math.max(maxSum, stats.sum);
+                }
+
+                this.minOddDisplay.textContent = minOdd;
+                this.maxOddDisplay.textContent = maxOdd;
+                this.avgOddDisplay.textContent = (totalOdds / numSimulations).toFixed(1);
+
+                this.minEvenDisplay.textContent = minEven;
+                this.maxEvenDisplay.textContent = maxEven;
+                this.avgEvenDisplay.textContent = (totalEvens / numSimulations).toFixed(1);
+
+                this.minFibDisplay.textContent = minFib;
+                this.maxFibDisplay.textContent = maxFib;
+                this.avgFibDisplay.textContent = (totalFibonacci / numSimulations).toFixed(1);
+
+                this.minSumDisplay.textContent = minSum;
+                this.maxSumDisplay.textContent = maxSum;
+                this.avgSumDisplay.textContent = (totalSums / numSimulations).toFixed(0); // Soma geralmente é um número inteiro
+
+                this.container.querySelector('p.text-center.mb-3').classList.add('hidden'); // Oculta a mensagem de carregamento
+            }
+        };
+
+        /**
+         * Objeto `AIAnalysisFeature` gerencia a chamada à IA e exibição dos resultados.
+         */
+        const AIAnalysisFeature = {
+            resultContainer: null,
+
+            init: function() {
+                this.resultContainer = document.getElementById('ai-analysis-result');
+            },
+
+            /**
+             * Envia um conjunto de números para a IA para análise e exibe o resultado.
+             * @param {number[]} numbers - O array de números para analisar.
+             */
+            analyzeGame: async function(numbers) {
+                this.resultContainer.innerHTML = '<p class="text-center text-blue-300">Analisando com IA... ✨</p>';
+
+                const prompt = `Você é um especialista em análise de jogos da Lotofácil. Analise o seguinte conjunto de 15 números (selecionados de 1 a 25) para a Lotofácil. Leve em consideração a distribuição de números (baixos/altos), a proporção de números pares e ímpares, a presença de números de Fibonacci e a soma total. Forneça uma breve análise estatística e, se houver, qualquer padrão interessante ou observação estratégica. Seja conciso. Números: ${numbers.join(', ')}`;
+
+                try {
+                    let chatHistory = [];
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = ""; // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                    const response = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                    const result = await response.json(); // Use await here
+                    
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        this.resultContainer.innerHTML = `<p>${text}</p>`;
+                    } else {
+                        this.resultContainer.innerHTML = '<p class="text-center text-red-300">Não foi possível obter a análise da IA. Tente novamente.</p>';
+                    }
+                } catch (error) {
+                    console.error('Erro ao chamar a API do Gemini:', error);
+                    this.resultContainer.innerHTML = '<p class="text-center text-red-300">Erro na comunicação com a IA. Verifique sua conexão.</p>';
+                }
+            }
+        };
+
+        /**
+         * Objeto `CreatorPasswordManager` gerencia a geração e cópia da senha do criador.
+         * Integrado diretamente no arquivo principal.
+         */
+        const CreatorPasswordManager = {
+            generatePasswordButton: null,
+            generatedPasswordDisplay: null,
+            copyPasswordButton: null,
+            copyMessageDisplay: null,
+            // Removido creatorMasterPasswordInput e unlockCreatorPasswordButton daqui
+            closeCreatorSectionButton: null, 
+            creatorPasswordSection: null, 
+            generatedPasswordControls: null, 
+            
+            // Novos elementos para o acesso principal
+            mainAccessMasterPasswordInput: null,
+            unlockMainAccessButton: null,
+            mainAccessMessage: null,
+            toggleCreatorSectionContainer: null, // O div que contém o botão "Acessar Gerador de Senha"
+
+            generatedPassword: '',
+            MAIN_ACCESS_PASSWORD: "@Kb19451200", // Nova senha mestra para o acesso principal
+            allGeneratedPasswords: new Set(), 
+
+            /**
+             * Inicializa os elementos da UI e listeners.
+             */
+            init: function() {
+                this.generatePasswordButton = document.getElementById('generate-creator-password');
+                this.generatedPasswordDisplay = document.getElementById('generated-creator-password');
+                this.copyPasswordButton = document.getElementById('copy-creator-password');
+                this.copyMessageDisplay = document.getElementById('creator-password-message');
+                this.closeCreatorSectionButton = document.getElementById('close-creator-section-button'); 
+                this.creatorPasswordSection = document.getElementById('creator-password-section'); 
+                this.generatedPasswordControls = document.getElementById('generated-password-controls'); 
+
+                // Inicializa os novos elementos de acesso principal
+                this.mainAccessMasterPasswordInput = document.getElementById('main-access-master-password-input');
+                this.unlockMainAccessButton = document.getElementById('unlock-main-access-button');
+                this.mainAccessMessage = document.getElementById('main-access-message');
+                this.toggleCreatorSectionContainer = document.getElementById('toggle-creator-section-container');
+
+                this.generatePasswordButton.addEventListener('click', () => this.generateAndDisplayPassword());
+                this.copyPasswordButton.addEventListener('click', () => this.copyGeneratedPassword());
+                this.closeCreatorSectionButton.addEventListener('click', () => this.hideCreatorSection()); 
+                
+                // Listener para o novo botão de desbloqueio principal
+                this.unlockMainAccessButton.addEventListener('click', () => this.unlockMainAccess());
+
+                this.loadState();
+                this.checkMainAccessStatus(); // Verifica o status de acesso principal na inicialização
+                console.log('[CreatorPasswordManager] Initialized.');
+            },
+
+            /**
+             * Carrega o estado do criador (senha gerada e status de desbloqueio) do localStorage.
+             */
+            loadState: function() {
+                try {
+                    const savedGeneratedPassword = localStorage.getItem('lotofacilExpertGeneratedPassword');
+                    const savedAllGeneratedPasswords = localStorage.getItem('lotofacilExpertAllGeneratedPasswords');
+
+                    if (savedGeneratedPassword) {
+                        this.generatedPassword = savedGeneratedPassword;
+                        this.generatedPasswordDisplay.textContent = this.generatedPassword;
+                    } else {
+                        this.generatedPasswordDisplay.textContent = 'Nenhuma senha gerada.';
+                    }
+
+                    if (savedAllGeneratedPasswords) {
+                        this.allGeneratedPasswords = new Set(JSON.parse(savedAllGeneratedPasswords));
+                    } else {
+                        this.allGeneratedPasswords = new Set();
+                    }
+                    if (this.generatedPassword && !this.allGeneratedPasswords.has(this.generatedPassword)) {
+                        this.allGeneratedPasswords.add(this.generatedPassword);
+                        this.saveState();
+                    }
+                    console.log('[CreatorPasswordManager] State loaded. generatedPassword:', this.generatedPassword, 'allGeneratedPasswords:', Array.from(this.allGeneratedPasswords));
+                } catch (e) {
+                    console.error('[CreatorPasswordManager] Erro ao carregar estado do localStorage:', e);
+                    this.generatedPassword = '';
+                    this.allGeneratedPasswords = new Set();
+                    this.generatedPasswordDisplay.textContent = 'Erro ao carregar estado. Nenhuma senha gerada.';
+                    this.copyMessageDisplay.textContent = 'Erro ao carregar estado.';
+                    this.copyMessageDisplay.classList.remove('text-green-300', 'text-red-300');
+                    this.copyMessageDisplay.classList.add('text-gray-300');
+                }
+            },
+
+            /**
+             * Salva o estado do criador (senha gerada e status de desbloqueio) no localStorage.
+             */
+            saveState: function() {
+                localStorage.setItem('lotofacilExpertGeneratedPassword', this.generatedPassword);
+                localStorage.setItem('lotofacilExpertAllGeneratedPasswords', JSON.stringify(Array.from(this.allGeneratedPasswords)));
+            },
+
+            /**
+             * Verifica e atualiza a UI com base no status de acesso principal.
+             */
+            checkMainAccessStatus: function() {
+                const isMainAccessUnlocked = localStorage.getItem('lotofacilExpertMainAccessUnlocked') === 'true';
+                if (isMainAccessUnlocked) {
+                    this.mainAccessMasterPasswordInput.classList.add('hidden-until-unlocked');
+                    this.unlockMainAccessButton.classList.add('hidden-until-unlocked');
+                    this.mainAccessMessage.classList.add('hidden-until-unlocked');
+                    this.toggleCreatorSectionContainer.classList.remove('hidden-until-unlocked');
+                    this.mainAccessMessage.textContent = 'Acesso principal desbloqueado.';
+                    this.mainAccessMessage.classList.remove('text-red-300', 'text-gray-300');
+                    this.mainAccessMessage.classList.add('text-green-300');
+                } else {
+                    this.mainAccessMasterPasswordInput.classList.remove('hidden-until-unlocked');
+                    this.unlockMainAccessButton.classList.remove('hidden-until-unlocked');
+                    this.mainAccessMessage.classList.remove('hidden-until-unlocked');
+                    this.toggleCreatorSectionContainer.classList.add('hidden-until-unlocked');
+                    this.mainAccessMessage.textContent = 'Insira a senha mestra para acessar.';
+                    this.mainAccessMessage.classList.remove('text-green-300', 'text-red-300');
+                    this.mainAccessMessage.classList.add('text-gray-300');
+                }
+            },
+
+            /**
+             * Desbloqueia o acesso principal se a senha mestra estiver correta.
+             */
+            unlockMainAccess: function() {
+                const enteredMasterPassword = this.mainAccessMasterPasswordInput.value;
+                if (enteredMasterPassword === this.MAIN_ACCESS_PASSWORD) {
+                    localStorage.setItem('lotofacilExpertMainAccessUnlocked', 'true');
+                    this.mainAccessMasterPasswordInput.value = ''; // Limpa o campo da senha mestra
+                    this.mainAccessMessage.textContent = 'Acesso principal desbloqueado!';
+                    this.mainAccessMessage.classList.remove('text-red-300', 'text-gray-300');
+                    this.mainAccessMessage.classList.add('text-green-300');
+                    this.checkMainAccessStatus(); // Atualiza a UI
+                } else {
+                    this.mainAccessMessage.textContent = 'Senha mestra principal incorreta.';
+                    this.mainAccessMessage.classList.remove('text-green-300', 'text-gray-300');
+                    this.mainAccessMessage.classList.add('text-red-300');
+                }
+            },
+
+            /**
+             * Gera uma senha aleatória e forte.
+             * @param {number} length - O comprimento da senha.
+             * @returns {string} A senha gerada.
+             */
+            generateRandomPassword: function(length = 16) {
+                const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
+                let password = "";
+                for (let i = 0; i < length; i++) {
+                    const randomIndex = Math.floor(Math.random() * charset.length);
+                    password += charset[randomIndex];
+                }
+                return password;
+            },
+
+            /**
+             * Gera e exibe uma nova senha, e a adiciona ao conjunto de senhas válidas.
+             */
+            generateAndDisplayPassword: function() {
+                this.generatedPassword = this.generateRandomPassword();
+                this.generatedPasswordDisplay.textContent = this.generatedPassword;
+                this.copyMessageDisplay.textContent = 'Nova senha gerada!';
+                this.copyMessageDisplay.classList.remove('text-red-300', 'text-gray-300');
+                this.copyMessageDisplay.classList.add('text-green-300');
+                
+                this.allGeneratedPasswords.add(this.generatedPassword);
+                this.saveState();
+                
+                // Notifica o GameGenerator que as senhas foram atualizadas
+                GameGenerator.updateValidPasswords(Array.from(this.allGeneratedPasswords));
+            },
+
+            /**
+             * Copia a senha gerada para a área de transferência.
+             */
+            copyGeneratedPassword: function() {
+                if (this.generatedPassword) {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = this.generatedPassword;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        this.copyMessageDisplay.textContent = 'Senha copiada para a área de transferência!';
+                        this.copyMessageDisplay.classList.remove('text-red-300', 'text-gray-300');
+                        this.copyMessageDisplay.classList.add('text-green-300');
+                    } catch (err) {
+                        console.error('Falha ao copiar a senha:', err);
+                        this.copyMessageDisplay.textContent = 'Falha ao copiar. Copie manualmente.';
+                        this.copyMessageDisplay.classList.remove('text-green-300', 'text-gray-300');
+                        this.copyMessageDisplay.classList.add('text-red-300');
+                    } finally {
+                        document.body.removeChild(textarea);
+                    }
+                } else {
+                    this.copyMessageDisplay.textContent = 'Nenhuma senha para copiar.';
+                    this.copyMessageDisplay.classList.remove('text-green-300', 'text-gray-300');
+                    this.copyMessageDisplay.classList.add('text-red-300');
+                }
+            },
+
+            /**
+             * Oculta a seção do gerador de senha do criador.
+             */
+            hideCreatorSection: function() {
+                this.creatorPasswordSection.classList.add('creator-section-hidden');
+                console.log('[CreatorPasswordManager] Hiding creator password section.');
+            },
+
+            /**
+             * Retorna todas as senhas geradas.
+             * @returns {string[]} Array de senhas geradas.
+             */
+            getAllGeneratedPasswords: function() {
+                return Array.from(this.allGeneratedPasswords);
+            }
+        };
+
+        /**
+         * Objeto `GameGenerator` gerencia a lógica de geração de jogos.
+         */
+        const GameGenerator = {
+            generateButton: null,
+            numGamesSelect: null,
+            userGeneratedGamesList: null,
+            passwordInput: null, // Referência ao campo de senha
+            unlockButton: null,  // Referência ao botão de desbloqueio
+            unlockMessage: null, // Mensagem geral para o status de desbloqueio
+            remainingClicks: 0, // Cliques restantes para a senha ATIVA
+            isUnlocked: false, // Estado de desbloqueio para a senha ATIVA
+            validMasterPasswords: [], // Lista de senhas válidas (agora do CreatorPasswordManager)
+            activePasswordInSession: "", // A senha que o usuário usou para desbloquear e está ativa na sessão
+            passwordStates: {}, // Objeto para armazenar cliques e status por senha
+            MAX_CLICKS_PER_PASSWORD: 100, // Limite de cliques por senha
+            MAX_ATTEMPTS: 5000000, 
+
+            /**
+             * Inicializa os elementos da UI e listeners.
+             */
+            init: function() {
+                this.generateButton = document.getElementById('generate-button');
+                this.numGamesSelect = document.getElementById('num-games-select');
+                if (!this.numGamesSelect) {
+                    console.error('[GameGenerator] Element with ID "num-games-select" not found!');
+                    return;
+                }
+                this.userGeneratedGamesList = document.getElementById('user-generated-games-list');
+                this.passwordInput = document.getElementById('password-input');
+                this.unlockButton = document.getElementById('unlock-button');
+                this.unlockMessage = document.getElementById('unlock-message');
+
+                this.generateButton.addEventListener('click', () => this.handleGenerateClick());
+                this.unlockButton.addEventListener('click', () => this.unlockButtonClicks());
+                
+                this.loadPasswordStatesFromStorage();
+                this.loadActiveSessionState();
+                // Carrega as senhas válidas do CreatorPasswordManager na inicialização
+                this.validMasterPasswords = CreatorPasswordManager.getAllGeneratedPasswords();
+                this.updateGenerateButtonUI();
+                console.log('[GameGenerator] Initialized. isUnlocked:', this.isUnlocked, 'remainingClicks:', this.remainingClicks, 'activePasswordInSession:', this.activePasswordInSession);
+            },
+
+            /**
+             * Atualiza a lista de senhas válidas (chamado pelo CreatorPasswordManager).
+             * @param {string[]} passwords - Array de senhas válidas.
+             */
+            updateValidPasswords: function(passwords) {
+                this.validMasterPasswords = passwords;
+                console.log('[GameGenerator] Valid passwords updated by CreatorPasswordManager:', this.validMasterPasswords);
+                this.updateGenerateButtonUI(); // Revalida o estado do botão de gerar
+            },
+
+            /**
+             * Desbloqueia os cliques do botão se a senha inserida estiver correta.
+             */
+            unlockButtonClicks: function() {
+                const enteredPassword = this.passwordInput.value;
+
+                console.log('[GameGenerator] Attempting to unlock. Entered:', enteredPassword, 'Valid passwords:', this.validMasterPasswords);
+
+                if (this.validMasterPasswords.includes(enteredPassword)) {
+                    this.activePasswordInSession = enteredPassword;
+
+                    const currentState = this.passwordStates[this.activePasswordInSession] || { clicks: 0, unlocked: false };
+
+                    if (!currentState.unlocked || currentState.clicks <= 0) {
+                        this.isUnlocked = true;
+                        this.remainingClicks = this.MAX_CLICKS_PER_PASSWORD; // Concede 100 cliques
+                        this.unlockMessage.textContent = `Botão desbloqueado! Você tem ${this.MAX_CLICKS_PER_PASSWORD} cliques.`;
+                        this.unlockMessage.classList.remove('text-red-300', 'text-gray-300');
+                        this.unlockMessage.classList.add('text-green-300');
+                    } else {
+                        this.isUnlocked = currentState.unlocked;
+                        this.remainingClicks = currentState.clicks;
+                        this.unlockMessage.textContent = `Botão já desbloqueado! Você tem ${this.remainingClicks} cliques restantes.`;
+                        this.unlockMessage.classList.remove('text-red-300', 'text-gray-300');
+                        this.unlockMessage.classList.add('text-green-300');
+                    }
+                    this.passwordInput.value = '';
+                    this.saveClickState();
+                } else {
+                    this.isUnlocked = false;
+                    this.remainingClicks = 0;
+                    this.unlockMessage.textContent = 'Senha incorreta ou não definida. Tente novamente.';
+                    this.unlockMessage.classList.remove('text-green-300', 'text-gray-300');
+                    this.unlockMessage.classList.add('text-red-300');
+                }
+                this.updateGenerateButtonUI();
+                console.log('[GameGenerator] Unlock attempt finished. isUnlocked:', this.isUnlocked, 'remainingClicks:', this.remainingClicks, 'activePasswordInSession:', this.activePasswordInSession);
+            },
+
+            /**
+             * Carrega todos os estados de senhas do localStorage.
+             */
+            loadPasswordStatesFromStorage: function() {
+                try {
+                    const savedPasswordStates = localStorage.getItem('lotofacilExpertPasswordStates');
+                    if (savedPasswordStates) {
+                        this.passwordStates = JSON.parse(savedPasswordStates);
+                    } else {
+                        this.passwordStates = {};
+                    }
+                    console.log('[GameGenerator] Loaded all passwordStates from localStorage:', this.passwordStates);
+                } catch (e) {
+                    console.error('[GameGenerator] Error loading password states from localStorage:', e);
+                    this.passwordStates = {};
+                }
+            },
+
+            /**
+             * Carrega o estado da sessão ativa (a última senha usada para desbloquear).
+             */
+            loadActiveSessionState: function() {
+                try {
+                    this.activePasswordInSession = localStorage.getItem('lotofacilExpertActivePasswordInSession') || "";
+                    console.log('[GameGenerator] Loaded activePasswordInSession:', this.activePasswordInSession);
+
+                    if (this.activePasswordInSession && this.passwordStates[this.activePasswordInSession]) {
+                        const stateForActivePassword = this.passwordStates[this.activePasswordInSession];
+                        this.remainingClicks = stateForActivePassword.clicks;
+                        this.isUnlocked = stateForActivePassword.unlocked;
+                        console.log(`[GameGenerator] State for active session password '${this.activePasswordInSession}' loaded: clicks=${this.remainingClicks}, unlocked=${this.isUnlocked}`);
+
+                        if (this.isUnlocked && this.remainingClicks > 0) {
+                            this.unlockMessage.textContent = `Botão desbloqueado! Você tem ${this.remainingClicks} cliques restantes.`;
+                            this.unlockMessage.classList.remove('text-red-300', 'text-gray-300');
+                            this.unlockMessage.classList.add('text-green-300');
+                        } else {
+                            this.isUnlocked = false;
+                            this.remainingClicks = 0;
+                            this.unlockMessage.textContent = 'Insira a senha para gerar jogos.';
+                            this.unlockMessage.classList.remove('text-red-300', 'text-green-300');
+                            this.unlockMessage.classList.add('text-gray-300');
+                        }
+                    } else {
+                        this.remainingClicks = 0;
+                        this.isUnlocked = false;
+                        this.unlockMessage.textContent = 'Insira a senha para gerar jogos.';
+                        this.unlockMessage.classList.remove('text-red-300', 'text-green-300');
+                        this.unlockMessage.classList.add('text-gray-300');
+                    }
+                } catch (e) {
+                    console.error('[GameGenerator] Error loading active session state from localStorage:', e);
+                    this.remainingClicks = 0;
+                    this.isUnlocked = false;
+                    this.activePasswordInSession = "";
+                    this.unlockMessage.textContent = 'Erro ao carregar estado. Insira a senha para gerar jogos.';
+                    this.unlockMessage.classList.remove('text-red-300', 'text-green-300');
+                    this.unlockMessage.classList.add('text-gray-300');
+                }
+            },
+
+            /**
+             * Salva o estado atual dos cliques e do desbloqueio para a senha ativa no localStorage.
+             */
+            saveClickState: function() {
+                if (this.activePasswordInSession) {
+                    this.passwordStates[this.activePasswordInSession] = {
+                        clicks: this.remainingClicks,
+                        unlocked: this.isUnlocked
+                    };
+                    localStorage.setItem('lotofacilExpertPasswordStates', JSON.stringify(this.passwordStates));
+                    localStorage.setItem('lotofacilExpertActivePasswordInSession', this.activePasswordInSession);
+                    console.log('[GameGenerator] Click state saved for active password:', this.activePasswordInSession, 'remainingClicks:', this.remainingClicks, 'isUnlocked:', this.isUnlocked);
+                } else {
+                    console.warn('[GameGenerator] Cannot save click state: no active password in session.');
+                }
+            },
+
+            /**
+             * Atualiza a interface do usuário do botão de gerar jogos.
+             */
+            updateGenerateButtonUI: function() {
+                const clicksSpan = document.getElementById('generate-button-clicks-remaining');
+                clicksSpan.textContent = `(${this.remainingClicks})`;
+
+                if (this.remainingClicks <= 0 || !this.isUnlocked) {
+                    this.generateButton.disabled = true;
+                    this.generateButton.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    this.generateButton.disabled = false;
+                    this.generateButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+                console.log('[GameGenerator] Generate button UI updated. Disabled:', this.generateButton.disabled);
+            },
+
+            /**
+             * Lida com o clique no botão de gerar jogos.
+             */
+            handleGenerateClick: function() {
+                console.log('[GameGenerator] Generate button clicked. isUnlocked:', this.isUnlocked, 'remainingClicks:', this.remainingClicks);
+                if (!this.isUnlocked) {
+                    this.unlockMessage.textContent = 'Por favor, insira a senha para desbloquear os cliques.';
+                    this.unlockMessage.classList.remove('text-gray-300', 'text-green-300');
+                    this.unlockMessage.classList.add('text-red-300');
+                    return;
+                }
+
+                if (this.remainingClicks <= 0) {
+                    this.unlockMessage.textContent = `Você utilizou todos os cliques. Desbloqueie novamente com a senha.`;
+                    this.unlockMessage.classList.remove('text-gray-300', 'text-green-300');
+                    this.unlockMessage.classList.add('text-red-300');
+                    this.generateButton.disabled = true; // Desabilita o botão se não houver cliques
+                    this.generateButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    return;
+                }
+
+                this.remainingClicks--;
+                this.saveClickState(); // Salva o estado após cada clique
+                this.updateGenerateButtonUI();
+
+                this.generateGames();
+            },
+
+            /**
+             * Gera e exibe os jogos da Lotofácil, garantindo 8 números ímpares e mostrando repetidos do último concurso.
+             * Garante que a diferença entre números consecutivos seja no máximo 4.
+             */
+            generateGames: function() {
+                this.userGeneratedGamesList.innerHTML = ''; // Limpa os jogos anteriores
+                let numGamesToGenerate;
+                try {
+                    numGamesToGenerate = parseInt(this.numGamesSelect.value);
+                    console.log('[GameGenerator] Generating games. numGamesToGenerate:', numGamesToGenerate, 'numGamesSelect.value:', this.numGamesSelect.value);
+                } catch (e) {
+                    console.error('[GameGenerator] Error parsing num-games-select value:', e, 'Value:', this.numGamesSelect ? this.numGamesSelect.value : 'null/undefined');
+                    this.userGeneratedGamesList.innerHTML = '<p class="text-red-300 text-center">Erro ao determinar o número de jogos a gerar. Tente novamente.</p>';
+                    return; // Stop execution if parsing fails
+                }
+                
+                const fixedNumbers = FixedNumbersManager.getFixedNumbers();
+                const latestLotofacilNumbers = LotofacilUI.latestLotofacilDezenas; // Pega os números do último sorteio
+
+                const maxDifference = 4; // Diferença máxima permitida entre números consecutivos
+
+                // --- INÍCIO: Pré-verificação de números fixos para evitar cenários impossíveis ---
+                const fixedStats = LotteryUtils.calculateStatistics(fixedNumbers);
+                const fixedRepeatedCount = fixedNumbers.filter(num => latestLotofacilNumbers.includes(num)).length;
+
+                if (fixedNumbers.length > 0) {
+                    // Verifica se os números fixos já tornam impossível ter 8 ímpares
+                    if (fixedStats.odd > 8 || (fixedNumbers.length - fixedStats.odd) > 7) {
+                        this.userGeneratedGamesList.innerHTML = '<p class="text-red-300 text-center">Os números fixos selecionados impossibilitam a condição de 8 números ímpares. Por favor, ajuste.</p>';
+                        console.error("Erro: Números fixos impossibilitam a condição de 8 ímpares.");
+                        return;
+                    }
+
+                    // Verifica se os números fixos já tornam impossível ter 8 ou 9 repetidos
+                    if (fixedRepeatedCount > 9) {
+                        this.userGeneratedGamesList.innerHTML = '<p class="text-red-300 text-center">Os números fixos selecionados já excedem o limite de 9 números repetidos do último concurso. Por favor, ajuste.</p>';
+                        console.error("Erro: Números fixos excedem o limite de repetidos.");
+                        return;
+                    }
+                }
+                // --- FIM: Pré-verificação de números fixos ---
+
+
+                for (let i = 0; i < numGamesToGenerate; i++) {
+                    let finalGame = [];
+                    let validGameFound = false;
+
+                    // Loop infinito até que um jogo válido seja encontrado
+                    let gameAttempts = 0;
+                    const MAX_GAME_ATTEMPTS = 10000; // Limite de tentativas para cada jogo individual
+                    while (!validGameFound && gameAttempts < MAX_GAME_ATTEMPTS) {
+                        gameAttempts++;
+                        let currentGeneratedNumbers = [...fixedNumbers]; // Começa com os números fixos
+                        currentGeneratedNumbers.sort((a, b) => a - b); // Garante que os números fixos estejam ordenados
+
+                        let availableNumbers = Array.from({ length: 25 }, (_, idx) => idx + 1);
+                        availableNumbers = availableNumbers.filter(num => !fixedNumbers.includes(num)); 
+
+                        let tempGame = [...currentGeneratedNumbers];
+
+                        let fixedNumbersValid = true;
+                        if (tempGame.length > 1) {
+                            for (let k = 0; k < tempGame.length - 1; k++) {
+                                if (tempGame[k+1] - tempGame[k] > maxDifference) {
+                                    fixedNumbersValid = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!fixedNumbersValid) {
+                            continue;
+                        }
+
+                        // Preenche o jogo com os números restantes, respeitando a restrição de diferença
+                        while (tempGame.length < 15) {
+                            let lastNumber = tempGame.length > 0 ? tempGame[tempGame.length - 1] : 0;
+                            
+                            let minNext = lastNumber + 1;
+                            let maxNext = lastNumber + maxDifference;
+
+                            let possibleNextNumbers = availableNumbers.filter(num => 
+                                num >= minNext && num <= maxNext && !tempGame.includes(num)
+                            );
+
+                            if (possibleNextNumbers.length === 0) {
+                                tempGame = [];
+                                break;
+                            }
+
+                            const nextNumber = possibleNextNumbers[Math.floor(Math.random() * possibleNextNumbers.length)];
+                            tempGame.push(nextNumber);
+                            tempGame.sort((a,b) => a-b);
+                            availableNumbers = availableNumbers.filter(num => num !== nextNumber); 
+                        }
+
+                        if (tempGame.length === 15) {
+                            const stats = LotteryUtils.calculateStatistics(tempGame);
+                            
+                            let currentRepeatedCount = 0;
+                            if (latestLotofacilNumbers && latestLotofacilNumbers.length > 0) {
+                                currentRepeatedCount = tempGame.filter(num => latestLotofacilNumbers.includes(num)).length;
+                            }
+
+                            // Condição combinada: 8 ímpares E (8 ou 9 repetidos)
+                            if (stats.odd === 8 && (currentRepeatedCount === 8 || currentRepeatedCount === 9)) {
+                                finalGame = tempGame;
+                                validGameFound = true;
+                            }
+                        }
+                    } // Fim do while para encontrar um jogo válido
+
+                    if (!validGameFound) {
+                        this.userGeneratedGamesList.innerHTML = `<p class="text-red-300 text-center">Não foi possível gerar o Jogo ${i + 1} com os critérios e números fixos definidos após ${MAX_GAME_ATTEMPTS} tentativas. Tente novamente ou ajuste os números fixos.</p>`;
+                        console.error(`[GameGenerator] Falha ao gerar o Jogo ${i + 1} após ${MAX_GAME_ATTEMPTS} tentativas.`);
+                        continue; // Pula para o próximo jogo se este falhou
+                    }
+
+                    const stats = LotteryUtils.calculateStatistics(finalGame);
+                    
+                    let repeatedCount = 0;
+                    if (latestLotofacilNumbers && latestLotofacilNumbers.length > 0) {
+                        repeatedCount = finalGame.filter(num => latestLotofacilNumbers.includes(num)).length;
+                    }
+
+                    const gameDiv = document.createElement('div');
+                    gameDiv.classList.add('bg-purple-700', 'p-3', 'rounded-md', 'mb-2', 'shadow-md');
+                    gameDiv.innerHTML = `
+                        <p class="font-bold mb-2">Jogo ${i + 1}:</p>
+                        <div class="flex flex-wrap gap-1 mb-2">
+                            ${finalGame.map(num => `
+                                <span class="w-8 h-8 bg-blue-500 text-white font-bold rounded-full flex items-center justify-center text-sm">
+                                    ${num}
+                                </span>
+                            `).join('')}
+                        </div>
+                        <p class="text-xs">
+                            Ímpares: ${stats.odd} | Pares: ${stats.even} | Fibonacci: ${stats.fibonacci} | Soma: ${stats.sum} | Repetidos (Último Concurso): ${repeatedCount}
+                        </p>
+                    `;
+                    this.userGeneratedGamesList.appendChild(gameDiv);
+                }
+                console.log(`[GameGenerator] Todos os ${numGamesToGenerate} jogos foram gerados e exibidos.`);
+            }
+        };
+
+
+        // Inicializa todos os módulos quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            // Referências aos elementos do botão de abrir/fechar e da seção
+            const toggleCreatorSectionButton = document.getElementById('toggle-creator-section-button');
+            const creatorPasswordSection = document.getElementById('creator-password-section');
+            const closeCreatorSectionButton = document.getElementById('close-creator-section-button');
+
+            // Listener para abrir a seção do criador (agora controlada pelo acesso principal)
+            toggleCreatorSectionButton.addEventListener('click', () => {
+                creatorPasswordSection.classList.remove('creator-section-hidden');
+                console.log('[Main App] Displayed creator password section.');
+            });
+
+            // Listener para fechar a seção do criador
+            closeCreatorSectionButton.addEventListener('click', () => {
+                creatorPasswordSection.classList.add('creator-section-hidden');
+                console.log('[Main App] Hidden creator password section.');
+            });
+
+            // Inicializa os módulos
+            CreatorPasswordManager.init(); // Inicializa primeiro para que o GameGenerator possa obter as senhas
+            GameGenerator.init(); 
+            FixedNumbersManager.init();
+            LotofacilUI.init();
+            AnalysisUI.init();
+            AIAnalysisFeature.init();
+        });
+    </script>
+</body>
+</html>
